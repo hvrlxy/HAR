@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.patches as mpatches
 
+# Global variables
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 
+# setting up legends for the plots
 red_patch = mpatches.Patch(color='red', label='workingPC')
 blue_patch = mpatches.Patch(color='blue', label='stand')
 green_path = mpatches.Patch(color = 'green', label = 'stand+walk+stairs')
@@ -15,7 +17,6 @@ magenta_path = mpatches.Patch(color = 'm', label = 'stairs')
 cyan_path = mpatches.Patch(color = 'c', label = 'walk+talk')
 orange_path = mpatches.Patch(color = 'orange', label = 'talk')
 patches = [red_patch, blue_patch, green_path, yellow_path, magenta_path, cyan_path, orange_path]
-
 
 def load_dataset(subject: int):
     '''
@@ -80,6 +81,10 @@ def split_data_by_activity(subject_df: pd.DataFrame):
     return activity_dfs
 
 def visualize_data(subject: int):
+    '''
+    Visualizes the data of the given subject.
+    subject: int: subject number
+    '''
     subject_df = load_dataset(subject)
     fig, axs = plt.subplots(3, 1, figsize=(10, 7))
     activity_dfs = split_data_by_activity(subject_df)
@@ -91,9 +96,5 @@ def visualize_data(subject: int):
             axs[j].plot(current_df['timestamp'], current_df[dir[j]], color=activity_color)
     plt.legend(handles=patches, loc='upper right', ncol=4)
     plt.show()
-            
 
-test_subject = load_dataset(1)
-print(split_data_by_activity(test_subject))
-visualize_data(1)
 
