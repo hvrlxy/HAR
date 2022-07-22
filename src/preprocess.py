@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.patches as mpatches
+from datetime import datetime
 
 # Global variables
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -97,4 +98,26 @@ def visualize_data(subject: int):
     plt.legend(handles=patches, loc='upper right', ncol=4)
     plt.show()
 
+def downsampling_activity(activity_df):
+    '''
+    Downsamples the activity sequence input as dataframe.
+    activity_df: pd.DataFrame: dataframe of the activity
+    Returns: pd.DataFrame: downsampled dataframe
+    '''
+    # assigning timestamp
+    base = pd.date_range("0:00", freq="19.23ms", periods=len(activity_df)).tolist()
+    activity_df['timestamp'] = base
+    activity_df['timestamp'] = pd.to_datetime(activity_df['timestamp'])
+    activity_df = activity_df.set_index('timestamp')
+    # downsampling
+    activity_df = activity_df.resample('125ms').sum()
 
+    return activity_df
+
+#test downsampling
+subject_df = load_dataset(1)
+activity_df = split_data_by_activity(subject_df)[0]
+downsampled_activity_df = downsampling_activity(activity_df)
+print(downsampled_activity_df)
+print(f"original length: {len(activity_df)}")
+print(f"downsampled length: {len(downsampled_activity_df)}")
