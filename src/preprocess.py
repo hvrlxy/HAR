@@ -105,14 +105,32 @@ def downsampling_activity(activity_df):
     Returns: pd.DataFrame: downsampled dataframe
     '''
     # assigning timestamp
+    timestamp_lst = activity_df['timestamp'].tolist()
+    activity = activity_df['activity'].tolist()[0]
     base = pd.date_range("0:00", freq="19.23ms", periods=len(activity_df)).tolist()
     activity_df['timestamp'] = base
     activity_df['timestamp'] = pd.to_datetime(activity_df['timestamp'])
     activity_df = activity_df.set_index('timestamp')
     # downsampling
     activity_df = activity_df.resample('125ms').sum()
-
+    activity_df['activity'] = activity
+    activity_df = activity_df.reset_index()
     return activity_df
+
+def visualize_sequence(activity_df: pd.DataFrame):
+    '''
+    Visualizes the sequence of the given activity.
+    activity_df: pd.DataFrame: dataframe of the activity
+    '''
+    activity_df = downsampling_activity(activity_df)
+    activity_color = activity_df['activity'].apply(lambda x: mark_activity(x)).tolist()[0]
+    dir = ['x', 'y', 'z']
+    fig, axs = plt.subplots(3, 1, figsize=(10, 7))
+    for j in range(3):
+        axs[j].plot(activity_df['timestamp'], activity_df[dir[j]], color=activity_color)
+    plt.legend(handles=patches, loc='upper right', ncol=4)
+    plt.title('Activity: ' + str(activity_color))
+    plt.show()
 
 #test downsampling
 subject_df = load_dataset(1)
@@ -121,3 +139,4 @@ downsampled_activity_df = downsampling_activity(activity_df)
 print(downsampled_activity_df)
 print(f"original length: {len(activity_df)}")
 print(f"downsampled length: {len(downsampled_activity_df)}")
+visualize_sequence(activity_df)
