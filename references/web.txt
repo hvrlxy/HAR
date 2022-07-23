@@ -1,0 +1,4 @@
+https://github.com/srane96/Activity-Recognition-Using-Accelerometer-Data
+
+https://machinelearningmastery.com/how-to-load-and-explore-a-standard-human-activity-recognition-problem/
+
