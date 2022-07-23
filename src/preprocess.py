@@ -21,6 +21,16 @@ cyan_path = mpatches.Patch(color = 'c', label = 'walk+talk')
 orange_path = mpatches.Patch(color = 'orange', label = 'talk')
 patches = [red_patch, blue_patch, green_path, yellow_path, magenta_path, cyan_path, orange_path]
 
+#matching activity id to activity name
+activity_lookup = {0: "None",
+                    1 : "workingPC",
+                    2 : "stand",
+                    3 : "stand+walk+stairs",
+                    4 : "walk",
+                    5 : "stairs",
+                    6 : "walk+talk",
+                    7 : "talk"}
+
 def load_dataset(subject: int):
     '''
     Loads the dataset for the given subject.
@@ -74,7 +84,7 @@ def split_data_by_activity(subject_df: pd.DataFrame):
         current_activity[4].append(activity_lst[i])
     return activity_dfs
 
-def visualize_data(subject: int):
+def visualize_data(subject: int, file_path: str):
     '''
     Visualizes the data of the given subject.
     subject: int: subject number
@@ -88,7 +98,8 @@ def visualize_data(subject: int):
         for j in range(3):
             axs[j].plot(activity_df['timestamp'], activity_df[directions[j]], color=activity_color)
     plt.legend(handles=patches, loc='upper right', ncol=4)
-    plt.show()
+    fig.suptitle("Subject " + str(subject))
+    plt.savefig(file_path)
 
 def downsampling_activity(activity_df, sampling_rate = "125ms"):
     '''
@@ -108,10 +119,12 @@ def downsampling_activity(activity_df, sampling_rate = "125ms"):
     activity_df = activity_df.reset_index()
     return activity_df
 
-def visualize_sequence(activity_df: pd.DataFrame, sampling_rate = "125ms"):
+def visualize_sequence(activity_df: pd.DataFrame, file_path: str, sampling_rate = "125ms"):
     '''
     Visualizes the sequence of the given activity.
     activity_df: pd.DataFrame: dataframe of the activity
+    sampling_rate: str: sampling rate
+    file_path: str: path to save the plot
     '''
     activity_df = downsampling_activity(activity_df, sampling_rate)
     activity_color = mark_activity(activity_df['activity'][0])
@@ -119,16 +132,22 @@ def visualize_sequence(activity_df: pd.DataFrame, sampling_rate = "125ms"):
     directions = ['x', 'y', 'z']
     for j in range(3):
         axs[j].plot(activity_df['timestamp'], activity_df[directions[j]], color=activity_color)
-    plt.legend(handles=patches, loc='upper right', ncol=4)
-    plt.title('Activity: ' + str(activity_color))
-    plt.show()
+    fig.suptitle('Activity: ' + str(activity_lookup[activity_df['activity'][0]]))
+    plt.savefig(file_path)
 
-#test downsampling
-# subject_df = load_dataset(1)
-# activity_df = split_data_by_activity(subject_df)[1]
-# downsampled_activity_df = downsampling_activity(activity_df)
-# print(downsampled_activity_df)
-# print(f"original length: {len(activity_df)}")
-# print(f"downsampled length: {len(downsampled_activity_df)}")
-# visualize_sequence(activity_df)
-# visualize_data(1)
+
+def generate_img_reports():
+    '''
+    Generates the reports of the images.
+    '''
+    for subject in range(1, 16):
+        # visualize all sequences
+        visualize_data(subject, CURRENT_PATH +
+                        f"/../reports/imgs/all_data/all_data_{subject}.png")
+        # visualize sequences of each activity
+        subject_df = load_dataset(subject)
+        activity_dfs = split_data_by_activity(subject_df)
+        for activity_df in activity_dfs:
+            visualize_sequence(activity_df=activity_df, sampling_rate="125ms",
+                                file_path=CURRENT_PATH +
+                                f"/../reports/imgs/sequences/{subject}/activity_sequence_{subject}_{activity_df['activity'][0]}.png")
