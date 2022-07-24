@@ -7,6 +7,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from tabulate import tabulate
 from preprocess import load_dataset
 from preprocess import split_data_by_activity
@@ -124,7 +125,7 @@ def generate_violin_basic_stats(file_name: str = "violin_basic_stats"):
     '''
     for i in range(1, 16):
         # load the data
-        report_file = CURRENT_PATH + f"/../reports/imgs/basic_stats/{file_name}_{i}.png"
+        report_file = CURRENT_PATH + f"/../reports/imgs/basic_stats/violin_plots/{file_name}_{i}.png"
         subject_df = load_dataset(i)
         activity_dfs = split_data_by_activity(subject_df)
         activity_dfs = merge_activity_sequence(activity_dfs)
@@ -149,6 +150,33 @@ def generate_violin_basic_stats(file_name: str = "violin_basic_stats"):
         # set title and save the plot
         fig.suptitle(f"Violin plot of basic statistics, Subject {i}")
         plt.savefig(report_file)
+
+def generate_histogram(file_name:str = "histogram"):
+    '''
+    Generate the histogram of the data.
+    '''
+    for i in range(1, 16):
+        # load the data
+        report_file = CURRENT_PATH + f"/../reports/imgs/basic_stats/histogram/{file_name}_{i}.png"
+        subject_df = load_dataset(i)
+        activity_dfs = split_data_by_activity(subject_df)
+        activity_dfs = merge_activity_sequence(activity_dfs)
+        fig, axs = plt.subplots(nrows=7, ncols=1, figsize=(10, 15))
+        fig.suptitle(f"Histogram of basic statistics, Subject {i}")
+        for activity in activity_dfs:
+            activity_code = int(activity['activity'].tolist()[0])
+            hist_df = pd.DataFrame(columns=['data', 'axis'])
+            data_lst = activity['x'].tolist() + activity['y'].tolist() + activity['z'].tolist()
+            axis_lst = ['x' for i in range(len(activity))] + ['y' for i in range(len(activity))] + ['z' for i in range(len(activity))]
+            hist_df['data'] = data_lst
+            hist_df['axis'] = axis_lst
+
+            # generate the histogram
+            sns.histplot(ax = axs[activity_code - 1],data=hist_df, x="data", hue="axis", bins=100)
+            axs[activity_code - 1].set_title(f"Histogram of Activity {activity_lookup[activity_code]}")
+        fig.tight_layout(pad = 1.0)
+        plt.savefig(report_file)
+
 #test
 # subject_df = load_dataset(1)
 # activity_dfs = split_data_by_activity(subject_df)
@@ -160,3 +188,4 @@ def generate_violin_basic_stats(file_name: str = "violin_basic_stats"):
 # generate_sequence_length_report()
 # generate_basic_stats_reports()
 # generate_violin_basic_stats()
+generate_histogram()

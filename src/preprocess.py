@@ -136,7 +136,7 @@ def visualize_sequence(activity_df: pd.DataFrame, file_path: str, sampling_rate 
     plt.savefig(file_path)
 
 
-def generate_img_reports():
+def generate_img_reports(sampling_rate = "125ms"):
     '''
     Generates the reports of the images.
     '''
@@ -148,6 +148,6 @@ def generate_img_reports():
         subject_df = load_dataset(subject)
         activity_dfs = split_data_by_activity(subject_df)
         for activity_df in activity_dfs:
-            visualize_sequence(activity_df=activity_df, sampling_rate="125ms",
+            visualize_sequence(activity_df=activity_df, sampling_rate=sampling_rate,
                                 file_path=CURRENT_PATH +
                                 f"/../reports/imgs/sequences/{subject}/activity_sequence_{subject}_{activity_df['activity'][0]}.png")
