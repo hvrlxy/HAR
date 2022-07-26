@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 from tabulate import tabulate
 from fbprophet import Prophet
+from sklearn.ensemble import IsolationForest
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -183,7 +184,6 @@ def generate_histogram(file_name:str = "histogram"):
         plt.savefig(report_file)
 
 # OUTLIER DETECTION
-# Detecting outliers using forecasting
 def generate_timestamp(activity_df: pd.DataFrame, start = datetime.today(), period: int = None, freq: str = '1D'):
     '''
     Generates a timestamp for the given activity.
@@ -197,6 +197,7 @@ def generate_timestamp(activity_df: pd.DataFrame, start = datetime.today(), peri
         period = len(activity_df)
     return pd.date_range(start, periods=period, freq=freq)
 
+# Detecting outliers using forecasting
 def in_sample_forecast(activity_df: pd.DataFrame, axis = 'x'):
     '''
     Returns the in-sample forecast of the given activity.
@@ -228,7 +229,6 @@ def detect_fbprophet_outlier(forecast_df: pd.DataFrame, activity: list):
     forecast_df = forecast_df[(forecast_df.y > forecast_df.yhat_upper)
                     | (forecast_df.y < forecast_df.yhat_lower)]
     return forecast_df
-
 
 def plot_in_sample_forecast(activity_df: pd.DataFrame, file_path: str = "in_sample_forecast_activity.png"):
     '''
@@ -273,9 +273,54 @@ def generate_fbprophet_outlier_plot():
         except Exception:
             continue
 
+# detecting outliers using clustering techniques
+def isolation_forest_detection(activity_df: pd.DataFrame, axis = 'x'):
+    if_model=IsolationForest(n_estimators=100, max_samples='auto', contamination=float(0.1),max_features=1.0)
+    if_model.fit(activity_df[[axis]])
+    outlier_df = pd.DataFrame()
+    outlier_df[axis] = activity_df[axis]
+    # predict raw anomaly score, -1.0 indicates anomaly, 1.0 is normal
+    outlier_df['scores'] = if_model.decision_function(activity_df[[axis]])
+    # threshold to define outliers
+    outlier_df['anomaly'] = if_model.predict(activity_df[[axis]])
+    return outlier_df
+
+def plot_isolation_forest_outliers(activity_df: pd.DataFrame, file_path: str = "isolation_forest_outliers_activity.png"):
+    directions = ['x', 'y', 'z']
+    # downsample the data
+    activity_df = downsampling_activity(activity_df)
+    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(10, 10))
+    for direction in directions:
+        outlier_df = isolation_forest_detection(activity_df, direction)
+        timestamp_lst = generate_timestamp(outlier_df)
+        outlier_df['ds'] = timestamp_lst
+        # plot the data
+        axs[directions.index(direction)].plot(outlier_df['ds'], outlier_df[direction], label='actual')
+        # highlight the outliers
+        outlier_df = outlier_df[outlier_df['anomaly'] == -1.0]
+        axs[directions.index(direction)].scatter(outlier_df['ds'], outlier_df[direction], c='r', s=10, label='outlier')
+        # set up title and legend
+        axs[directions.index(direction)].set_title(f"Isolation Forest outlier detection of {direction}-axis")
+        axs[directions.index(direction)].legend()
+    fig.suptitle(f"Isolation Forest outlier detection of Activity {activity_lookup[activity_df['activity'].tolist()[0]].upper()}")
+    plt.savefig(file_path)
+
+def generate_isolation_forest_outlier_plot():
+    for i in range(1, 16):
+        try:
+            # load the data
+            report_file = CURRENT_PATH + f"/../reports/imgs/outliers/clustering/{i}/"
+            subject_df = load_dataset(i)
+            activity_dfs = split_data_by_activity(subject_df)
+            for j in range(len(activity_dfs)):
+                plot_isolation_forest_outliers(activity_dfs[j], file_path=report_file + f'activity_{j}.png')
+        except Exception:
+            continue
 #test
-# subject_df = load_dataset(1)
-# activity_dfs = split_data_by_activity(subject_df)
+subject_df = load_dataset(1)
+activity_dfs = split_data_by_activity(subject_df)
+generate_isolation_forest_outlier_plot()
+# plot_isolation_forest_outliers(activity_dfs[0])
 # activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
 # plot_in_sample_forecast(activity_dfs[2])
 # forecast_df = in_sample_forecast(activity_dfs[1], axis='x')
