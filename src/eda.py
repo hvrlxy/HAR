@@ -275,8 +275,15 @@ def generate_fbprophet_outlier_plot():
 
 # detecting outliers using clustering techniques
 def isolation_forest_detection(activity_df: pd.DataFrame, axis = 'x'):
+    '''
+    Detects the outliers using isolation forest.
+    activity_df: pd.DataFrame: activity dataframe
+    axis: str: axis to detect outliers
+    Returns: pd.DataFrame: outlier dataframe'''
     if_model=IsolationForest(n_estimators=100, max_samples='auto', contamination=float(0.1),max_features=1.0)
-    if_model.fit(activity_df[[axis]])
+    # fit the model, suppress the stdout warnings
+    with suppress_stdout_stderr():
+        if_model.fit(activity_df[[axis]])
     outlier_df = pd.DataFrame()
     outlier_df[axis] = activity_df[axis]
     # predict raw anomaly score, -1.0 indicates anomaly, 1.0 is normal
@@ -286,6 +293,11 @@ def isolation_forest_detection(activity_df: pd.DataFrame, axis = 'x'):
     return outlier_df
 
 def plot_isolation_forest_outliers(activity_df: pd.DataFrame, file_path: str = "isolation_forest_outliers_activity.png"):
+    '''
+    Plots the outliers using isolation forest.
+    activity_df: pd.DataFrame: activity dataframe
+    file_path: str: path to the file to save the plot
+    '''
     directions = ['x', 'y', 'z']
     # downsample the data
     activity_df = downsampling_activity(activity_df)
@@ -306,6 +318,10 @@ def plot_isolation_forest_outliers(activity_df: pd.DataFrame, file_path: str = "
     plt.savefig(file_path)
 
 def generate_isolation_forest_outlier_plot():
+    '''
+    Generates the outlier plot using isolation forest algorithm
+    for all the activities.
+    '''
     for i in range(1, 16):
         try:
             # load the data
@@ -319,7 +335,6 @@ def generate_isolation_forest_outlier_plot():
 #test
 subject_df = load_dataset(1)
 activity_dfs = split_data_by_activity(subject_df)
-generate_isolation_forest_outlier_plot()
 # plot_isolation_forest_outliers(activity_dfs[0])
 # activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
 # plot_in_sample_forecast(activity_dfs[2])
@@ -336,3 +351,4 @@ generate_isolation_forest_outlier_plot()
 # generate_violin_basic_stats()
 # generate_histogram()
 # generate_fbprophet_outlier_plot()
+# generate_isolation_forest_outlier_plot()
