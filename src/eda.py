@@ -4,6 +4,7 @@ Author: Ha Le
 This file contains function to perform EDA.
 '''
 import os
+from tabnanny import verbose
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,6 +12,10 @@ import seaborn as sns
 from tabulate import tabulate
 from preprocess import load_dataset
 from preprocess import split_data_by_activity
+from preprocess import downsampling_activity
+from suppress_output import suppress_stdout_stderr
+from fbprophet import Prophet
+from datetime import datetime
 
 # Global variables
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -177,9 +182,89 @@ def generate_histogram(file_name:str = "histogram"):
         fig.tight_layout(pad = 1.0)
         plt.savefig(report_file)
 
+# OUTLIER DETECTION
+def generate_timestamp(activity_df: pd.DataFrame, start = datetime.today(), period: int = None, freq: str = '1D'):
+    if period is None:
+        period = len(activity_df)
+    return pd.date_range(start, periods=period, freq=freq)  
+
+def in_sample_forecast(activity_df: pd.DataFrame, axis = 'x'):
+    '''
+    Returns the in-sample forecast of the given activity.
+    activity_df: pd.DataFrame: activity dataframe
+    '''
+    if not (axis == 'x' or axis == 'y' or axis == 'z'):
+        raise ValueError("axis must be 'x', 'y' or 'z'")
+    forecast_df = pd.DataFrame(columns=['ds', 'y'])
+    forecast_range = generate_timestamp(activity_df, start="0:00", freq="19.23ms")
+    forecast_df['y'] = activity_df[axis]
+    forecast_df['ds'] = forecast_range
+    forecast_df['ds'] = pd.to_datetime(forecast_df['ds'])
+    # get the in-sample forecast
+    forecast_model = Prophet()
+    with suppress_stdout_stderr():
+        forecast_model.fit(forecast_df, verbose = False)
+    forecast = forecast_model.predict(pd.DataFrame(forecast_df['ds']))
+    return forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
+
+def detect_fbprophet_outlier(forecast_df: pd.DataFrame, activity: list):
+    '''
+    Detects the outliers using fbprophet. Outliers are defined as points 
+    outside the confidence interval bandwidth.
+    forecast_df: pd.DataFrame: forecast dataframe, including 'ds', 'yhat',
+    'yhat_lower', 'yhat_upper'
+    activity_df: list: list of actual data
+    '''
+    forecast_df['y'] = activity
+    forecast_df = forecast_df[(forecast_df.y > forecast_df.yhat_upper) 
+                    | (forecast_df.y < forecast_df.yhat_lower)]
+    return forecast_df
+
+
+def plot_in_sample_forecast(activity_df: pd.DataFrame, file_path: str = "in_sample_forecast_activity.png"):
+    directions = ['x', 'y', 'z']
+    fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(10, 10))
+    for direction in directions:
+        forecast = in_sample_forecast(activity_df, direction)
+        activity_df['ds'] = forecast['ds']
+        # plot the in-sample forecast
+        axs[directions.index(direction)].plot(forecast['ds'], forecast['yhat'], label='forecast')
+        # plot the confidence interval
+        axs[directions.index(direction)].fill_between(forecast['ds'], forecast['yhat_lower'], forecast['yhat_upper'], alpha=0.5)
+        # plot the actual data
+        axs[directions.index(direction)].plot(activity_df['ds'], activity_df[direction], label='actual')
+        # detect outliers
+        outlier_df = detect_fbprophet_outlier(forecast, activity_df[direction])
+        # plot the outliers
+        axs[directions.index(direction)].scatter(outlier_df['ds'], outlier_df['y'], c='r', s=10, label='outlier')
+        # set up title and legend
+        axs[directions.index(direction)].set_title(f"In-sample forecast of {direction}-axis")
+        axs[directions.index(direction)].legend()
+    fig.suptitle(f"In-sample forecast of Activity {activity_lookup[activity_df['activity'].tolist()[0]].upper()}")
+    plt.savefig(file_path)
+
+def generate_fbprophet_outlier_plot():
+    for i in range(1, 16):
+        try:
+            # load the data
+            report_file = CURRENT_PATH + f"/../reports/imgs/outliers/fbprophet/{i}/"
+            subject_df = load_dataset(i)
+            activity_dfs = split_data_by_activity(subject_df)
+            activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
+            for j in range(len(activity_dfs)):
+                plot_in_sample_forecast(activity_dfs[j], file_path=report_file + f'activity_{j}.png')
+        except:
+            print(f"Error: {i}")
+            continue
+
 #test
 # subject_df = load_dataset(1)
 # activity_dfs = split_data_by_activity(subject_df)
+# activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
+# plot_in_sample_forecast(activity_dfs[2])
+# forecast_df = in_sample_forecast(activity_dfs[1], axis='x')
+# activity = activity_dfs[1]['x'].tolist()
+# print(detect_fbprophet_outlier(forecast_df, activity))
 # activity_dfs = merge_activity_sequence(activity_dfs)
 # print(get_activity_stats(activity_dfs[3]))
 # print(activity_dfs)
@@ -188,4 +273,5 @@ def generate_histogram(file_name:str = "histogram"):
 # generate_sequence_length_report()
 # generate_basic_stats_reports()
 # generate_violin_basic_stats()
-generate_histogram()
+# generate_histogram()
+generate_fbprophet_outlier_plot()
