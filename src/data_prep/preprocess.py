@@ -39,7 +39,7 @@ def load_dataset(subject: int):
     if subject <= 0 or subject > 15:
         print("Subject must be in the range of 1-15.")
         return None
-    subject_df = pd.read_csv(CURRENT_PATH + "/../data/raw_data/" + str(subject) + '.csv'
+    subject_df = pd.read_csv(CURRENT_PATH + "/../../data/raw_data/" + str(subject) + '.csv'
                         , names = ['timestamp', 'x', 'y', 'z', 'activity'])
 
     return subject_df
@@ -146,11 +146,11 @@ def generate_img_reports(sampling_rate = "125ms"):
     for subject in range(1, 16):
         # visualize all sequences
         visualize_data(subject, CURRENT_PATH +
-                        f"/../reports/imgs/all_data/all_data_{subject}.png")
+                        f"/../../reports/imgs/all_data/all_data_{subject}.png")
         # visualize sequences of each activity
         subject_df = load_dataset(subject)
         activity_dfs = split_data_by_activity(subject_df)
         for activity_df in activity_dfs:
             visualize_sequence(activity_df=activity_df, sampling_rate=sampling_rate,
                                 file_path=CURRENT_PATH +
-                                f"/../reports/imgs/sequences/{subject}/activity_sequence_{subject}_{activity_df['activity'][0]}.png")
+                                f"/../../reports/imgs/sequences/{subject}/activity_sequence_{subject}_{activity_df['activity'][0]}.png")

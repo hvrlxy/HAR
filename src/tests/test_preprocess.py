@@ -6,7 +6,7 @@ This file contains test function for the file preprocess.py.
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from preprocess import *
+from data_prep.preprocess import *
 
 def test_load_dataset():
     '''
