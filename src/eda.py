@@ -230,7 +230,7 @@ def detect_fbprophet_outlier(forecast_df: pd.DataFrame, activity: list):
                     | (forecast_df.y < forecast_df.yhat_lower)]
     return forecast_df
 
-def plot_in_sample_forecast(activity_df: pd.DataFrame, file_path: str = "in_sample_forecast_activity.png"):
+def plot_in_sample_forecast(activity_df: pd.DataFrame, file_path: str = None):
     '''
     Plots the in-sample forecast of the given activity.
     activity_df: pd.DataFrame: activity dataframe
@@ -238,6 +238,7 @@ def plot_in_sample_forecast(activity_df: pd.DataFrame, file_path: str = "in_samp
     '''
     directions = ['x', 'y', 'z']
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(10, 10))
+    activity_code = activity_df['activity'].tolist()[0]
     for direction in directions:
         forecast = in_sample_forecast(activity_df, direction)
         activity_df['ds'] = forecast['ds']
@@ -254,20 +255,22 @@ def plot_in_sample_forecast(activity_df: pd.DataFrame, file_path: str = "in_samp
         # set up title and legend
         axs[directions.index(direction)].set_title(f"In-sample forecast of {direction}-axis")
         axs[directions.index(direction)].legend()
-    fig.suptitle(f"In-sample forecast of Activity {activity_lookup[activity_df['activity'].tolist()[0]].upper()}")
-    plt.savefig(file_path)
+    fig.suptitle(f"In-sample forecast of Activity {activity_lookup[activity_code].upper()} ({activity_code})")
+    if file_path is not None:
+        plt.savefig(file_path)
+    return plt
 
-def generate_fbprophet_outlier_plot():
+def generate_fbprophet_outlier_plot(start_subject: int = 1, end_subject: int = 15):
     '''
     Generates the outlier plot for all the activities.
     '''
-    for i in range(1, 16):
+    for i in range(start_subject, end_subject + 1):
         try:
             # load the data
             report_file = CURRENT_PATH + f"/../reports/imgs/outliers/fbprophet/{i}/"
             subject_df = load_dataset(i)
             activity_dfs = split_data_by_activity(subject_df)
-            activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
+            # activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
             for j in range(len(activity_dfs)):
                 plot_in_sample_forecast(activity_dfs[j], file_path=report_file + f'activity_{j}.png')
         except Exception:
@@ -292,7 +295,7 @@ def isolation_forest_detection(activity_df: pd.DataFrame, axis = 'x'):
     outlier_df['anomaly'] = if_model.predict(activity_df[[axis]])
     return outlier_df
 
-def plot_isolation_forest_outliers(activity_df: pd.DataFrame, file_path: str = "isolation_forest_outliers_activity.png"):
+def plot_isolation_forest_outliers(activity_df: pd.DataFrame, file_path: str = None):
     '''
     Plots the outliers using isolation forest.
     activity_df: pd.DataFrame: activity dataframe
@@ -300,7 +303,8 @@ def plot_isolation_forest_outliers(activity_df: pd.DataFrame, file_path: str = "
     '''
     directions = ['x', 'y', 'z']
     # downsample the data
-    activity_df = downsampling_activity(activity_df)
+    # activity_df = downsampling_activity(activity_df)
+    activity_code = activity_df['activity'].tolist()[0]
     fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(10, 10))
     for direction in directions:
         outlier_df = isolation_forest_detection(activity_df, direction)
@@ -314,15 +318,17 @@ def plot_isolation_forest_outliers(activity_df: pd.DataFrame, file_path: str = "
         # set up title and legend
         axs[directions.index(direction)].set_title(f"Isolation Forest outlier detection of {direction}-axis")
         axs[directions.index(direction)].legend()
-    fig.suptitle(f"Isolation Forest outlier detection of Activity {activity_lookup[activity_df['activity'].tolist()[0]].upper()}")
-    plt.savefig(file_path)
+    fig.suptitle(f"Isolation Forest outlier detection of Activity {activity_lookup[activity_code].upper()} ({activity_code})")
+    if file_path is not None:
+        plt.savefig(file_path)
+    return plt
 
-def generate_isolation_forest_outlier_plot():
+def generate_isolation_forest_outlier_plot(start_subject: int = 1, end_subject: int = 15):
     '''
     Generates the outlier plot using isolation forest algorithm
     for all the activities.
     '''
-    for i in range(1, 16):
+    for i in range(start_subject, end_subject + 1):
         try:
             # load the data
             report_file = CURRENT_PATH + f"/../reports/imgs/outliers/clustering/{i}/"
@@ -332,10 +338,45 @@ def generate_isolation_forest_outlier_plot():
                 plot_isolation_forest_outliers(activity_dfs[j], file_path=report_file + f'activity_{j}.png')
         except Exception:
             continue
+
+# HANDLING OUTLIERS
+# handling outliers using winsorization method
+def winsorizing_ts(activity_df: pd.DataFrame, axes = ['x', 'y', 'z']):
+    '''
+    Handles the outliers using winsorizing method.
+    activity_df: pd.DataFrame: activity dataframe
+    axis: str: axis to handle outliers
+    Returns: pd.DataFrame: fixed dataset
+    '''
+    # performing winsorizing on all indicated axes
+    for axis in axes:
+        winsored_values = np.array(activity_df[axis])
+        # winsorize the top 5% and bottom 5% of the data
+        winsored_values = winsorize(winsored_values, limits=[0.05, 0.05])
+        #replace it into the dataframe
+        activity_df[axis] = winsored_values
+    return activity_df
+    
+def removing_outliers(activity_df: pd.DataFrame, removed_indices: list = []):
+    '''
+    Removes the outliers.
+    activity_df: pd.DataFrame: activity dataframe
+    axis: str: axis to handle outliers
+    Returns: pd.DataFrame: fixed dataset
+    '''
+    activity_df.reset_index(drop=True, inplace=True)
+    activity_df.drop(removed_indices, axis=0, inplace=True)
+    activity_df.reset_index(drop=True, inplace=True)
+    return activity_df
+
+
 #test
 subject_df = load_dataset(1)
 activity_dfs = split_data_by_activity(subject_df)
-# plot_isolation_forest_outliers(activity_dfs[0])
+activity_df = removing_outliers(activity_df = activity_dfs[0], 
+                                removed_indices = list(range(0, 400)))
+plot_isolation_forest_outliers(activity_df).show()
+
 # activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
 # plot_in_sample_forecast(activity_dfs[2])
 # forecast_df = in_sample_forecast(activity_dfs[1], axis='x')
@@ -347,8 +388,9 @@ activity_dfs = split_data_by_activity(subject_df)
 # for activity_df in activity_dfs:
 #     print(calculate_sequence_length(activity_df))
 # generate_sequence_length_report()
+
 # generate_basic_stats_reports()
 # generate_violin_basic_stats()
 # generate_histogram()
 # generate_fbprophet_outlier_plot()
-# generate_isolation_forest_outlier_plot()
+# generate_isolation_forest_outlier_plot(start_subject=3)

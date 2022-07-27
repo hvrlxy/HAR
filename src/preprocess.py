@@ -114,7 +114,7 @@ def downsampling_activity(activity_df, sampling_rate = "125ms"):
     activity_df['timestamp'] = pd.to_datetime(activity_df['timestamp'])
     activity_df = activity_df.set_index('timestamp')
     # downsampling
-    activity_df = activity_df.resample(sampling_rate).sum()
+    activity_df = activity_df.resample(sampling_rate).mean()
     activity_df['activity'] = activity
     activity_df = activity_df.reset_index()
     return activity_df
