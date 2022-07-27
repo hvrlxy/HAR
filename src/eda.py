@@ -167,19 +167,23 @@ def generate_histogram(file_name:str = "histogram"):
         subject_df = load_dataset(i)
         activity_dfs = split_data_by_activity(subject_df)
         activity_dfs = merge_activity_sequence(activity_dfs)
+        # initialize the histogram
         fig, axs = plt.subplots(nrows=7, ncols=1, figsize=(10, 15))
         fig.suptitle(f"Histogram of basic statistics, Subject {i}")
         for activity in activity_dfs:
             activity_code = int(activity['activity'].tolist()[0])
+            # need to create a new dataframe to store the data according
+            # to the required format of a stacked histogram
+            # read: https://seaborn.pydata.org/generated/seaborn.histplot.html
             hist_df = pd.DataFrame(columns=['data', 'axis'])
             data_lst = activity['x'].tolist() + activity['y'].tolist() + activity['z'].tolist()
             axis_lst = ['x' for i in range(len(activity))] + ['y' for i in range(len(activity))] + ['z' for i in range(len(activity))]
             hist_df['data'] = data_lst
             hist_df['axis'] = axis_lst
-
-            # generate the histogram
+            # generate the histogram using seaborn
             sns.histplot(ax = axs[activity_code - 1],data=hist_df, x="data", hue="axis", bins=100)
             axs[activity_code - 1].set_title(f"Histogram of Activity {activity_lookup[activity_code]}")
+        # increase the spaces between the plots
         fig.tight_layout(pad = 1.0)
         plt.savefig(report_file)
 
@@ -205,13 +209,16 @@ def in_sample_forecast(activity_df: pd.DataFrame, axis = 'x'):
     '''
     if axis not in ['x', 'y', 'z']:
         raise ValueError("axis must be 'x', 'y' or 'z'")
+    # the forecast_df need to have columns with names 'y' and 'ds'
     forecast_df = pd.DataFrame(columns=['ds', 'y'])
+    # ds columns need to be datetime objects
     forecast_range = generate_timestamp(activity_df, start="0:00", freq="19.23ms")
     forecast_df['y'] = activity_df[axis]
     forecast_df['ds'] = forecast_range
     forecast_df['ds'] = pd.to_datetime(forecast_df['ds'])
     # get the in-sample forecast
     forecast_model = Prophet()
+    # the models will print out the iterations, suppress them
     with suppress_stdout_stderr():
         forecast_model.fit(forecast_df)
     forecast = forecast_model.predict(pd.DataFrame(forecast_df['ds']))
@@ -371,11 +378,11 @@ def removing_outliers(activity_df: pd.DataFrame, removed_indices: list = []):
 
 
 #test
-subject_df = load_dataset(1)
-activity_dfs = split_data_by_activity(subject_df)
-activity_df = removing_outliers(activity_df = activity_dfs[0], 
-                                removed_indices = list(range(0, 400)))
-plot_isolation_forest_outliers(activity_df).show()
+# subject_df = load_dataset(1)
+# activity_dfs = split_data_by_activity(subject_df)
+# activity_df = removing_outliers(activity_df = activity_dfs[0], 
+#                                 removed_indices = list(range(0, 400)))
+# plot_isolation_forest_outliers(activity_df).show()
 
 # activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
 # plot_in_sample_forecast(activity_dfs[2])
@@ -387,8 +394,8 @@ plot_isolation_forest_outliers(activity_df).show()
 # print(activity_dfs)
 # for activity_df in activity_dfs:
 #     print(calculate_sequence_length(activity_df))
-# generate_sequence_length_report()
 
+# generate_sequence_length_report()
 # generate_basic_stats_reports()
 # generate_violin_basic_stats()
 # generate_histogram()
