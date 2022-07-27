@@ -43,7 +43,7 @@ def generate_sequence_length_report(file_name: str = "sequence_length_report.txt
     '''
     Generates a report of the sequence length of each activity.
     '''
-    with open(CURRENT_PATH + f"/../reports/tables/{file_name}",
+    with open(CURRENT_PATH + f"/../../reports/tables/{file_name}",
                 "w+", encoding="utf-8") as report_file:
         report_table = pd.DataFrame(columns = ['Subject', "workingPC",
                                                 "stand", "stand+walk+stairs",
@@ -110,7 +110,7 @@ def generate_basic_stats_reports():
     '''
     for subject in range(1, 16):
         # load the dataset
-        with open(CURRENT_PATH + f"/../reports/tables/basic_stats/basic_stats_report_{subject}.txt",
+        with open(CURRENT_PATH + f"/../../reports/tables/basic_stats/basic_stats_report_{subject}.txt",
                                 "w+", encoding="utf-8") as report_file:
             subject_df = load_dataset(subject)
             activity_dfs = split_data_by_activity(subject_df)
@@ -131,7 +131,7 @@ def generate_violin_basic_stats(file_name: str = "violin_basic_stats"):
     '''
     for i in range(1, 16):
         # load the data
-        report_file = CURRENT_PATH + f"/../reports/imgs/basic_stats/violin_plots/{file_name}_{i}.png"
+        report_file = CURRENT_PATH + f"/../../reports/imgs/basic_stats/violin_plots/{file_name}_{i}.png"
         subject_df = load_dataset(i)
         activity_dfs = split_data_by_activity(subject_df)
         activity_dfs = merge_activity_sequence(activity_dfs)
@@ -163,7 +163,7 @@ def generate_histogram(file_name:str = "histogram"):
     '''
     for i in range(1, 16):
         # load the data
-        report_file = CURRENT_PATH + f"/../reports/imgs/basic_stats/histogram/{file_name}_{i}.png"
+        report_file = CURRENT_PATH + f"/../../reports/imgs/basic_stats/histogram/{file_name}_{i}.png"
         subject_df = load_dataset(i)
         activity_dfs = split_data_by_activity(subject_df)
         activity_dfs = merge_activity_sequence(activity_dfs)
@@ -274,7 +274,7 @@ def generate_fbprophet_outlier_plot(start_subject: int = 1, end_subject: int = 1
     for i in range(start_subject, end_subject + 1):
         try:
             # load the data
-            report_file = CURRENT_PATH + f"/../reports/imgs/outliers/fbprophet/{i}/"
+            report_file = CURRENT_PATH + f"/../../reports/imgs/outliers/fbprophet/{i}/"
             subject_df = load_dataset(i)
             activity_dfs = split_data_by_activity(subject_df)
             # activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
@@ -338,7 +338,7 @@ def generate_isolation_forest_outlier_plot(start_subject: int = 1, end_subject: 
     for i in range(start_subject, end_subject + 1):
         try:
             # load the data
-            report_file = CURRENT_PATH + f"/../reports/imgs/outliers/clustering/{i}/"
+            report_file = CURRENT_PATH + f"/../../reports/imgs/outliers/clustering/{i}/"
             subject_df = load_dataset(i)
             activity_dfs = split_data_by_activity(subject_df)
             for j in range(len(activity_dfs)):
@@ -371,30 +371,16 @@ def removing_outliers(activity_df: pd.DataFrame, removed_indices: list = []):
     axis: str: axis to handle outliers
     Returns: pd.DataFrame: fixed dataset
     '''
+    # reset the indices incase it has been messed up
     activity_df.reset_index(drop=True, inplace=True)
+    # remove the outliers
     activity_df.drop(removed_indices, axis=0, inplace=True)
+    # reset the indices since some of them has been deleted
     activity_df.reset_index(drop=True, inplace=True)
     return activity_df
 
 
 #test
-# subject_df = load_dataset(1)
-# activity_dfs = split_data_by_activity(subject_df)
-# activity_df = removing_outliers(activity_df = activity_dfs[0], 
-#                                 removed_indices = list(range(0, 400)))
-# plot_isolation_forest_outliers(activity_df).show()
-
-# activity_dfs = [downsampling_activity(activity_df) for activity_df in activity_dfs]
-# plot_in_sample_forecast(activity_dfs[2])
-# forecast_df = in_sample_forecast(activity_dfs[1], axis='x')
-# activity = activity_dfs[1]['x'].tolist()
-# print(detect_fbprophet_outlier(forecast_df, activity))
-# activity_dfs = merge_activity_sequence(activity_dfs)
-# print(get_activity_stats(activity_dfs[3]))
-# print(activity_dfs)
-# for activity_df in activity_dfs:
-#     print(calculate_sequence_length(activity_df))
-
 # generate_sequence_length_report()
 # generate_basic_stats_reports()
 # generate_violin_basic_stats()
