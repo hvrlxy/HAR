@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "jupyterlab-stickyland": "^0.1.4"
+  }
+}
