@@ -1,5 +1,6 @@
 import os
 import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -124,7 +125,7 @@ def generate_data_per_subject(subject: int):
     return data
 
 # test
-subject_df = pp.load_dataset(1)
-activity_dfs = pp.split_data_by_activity(subject_df)
-activity_data = generate_data_per_activity(activity_dfs[1])
-print(generate_data_per_subject(1))
+# subject_df = pp.load_dataset(1)
+# activity_dfs = pp.split_data_by_activity(subject_df)
+# activity_data = generate_data_per_activity(activity_dfs[1])
+# print(generate_data_per_subject(1))

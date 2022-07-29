@@ -4,6 +4,8 @@ Author: Ha Le
 This file contains function to perform EDA.
 '''
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from datetime import datetime
 from tabulate import tabulate
 from fbprophet import Prophet
@@ -38,6 +40,24 @@ def calculate_sequence_length(activity_df: pd.DataFrame):
     activity_df: pd.DataFrame: activity dataframe
     '''
     return len(activity_df)/52
+
+def calculate_activity_duration(subject_df: pd.DataFrame):
+    '''
+    Calculates the duration of the given activity.
+    subject_df: pd.DataFrame: subject raw dataframe
+    '''
+    # get the activity dataframe
+    activity_dfs = split_data_by_activity(subject_df)
+    activity_dict = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0}
+    # calculate the duration of each activity
+    for activity in activity_dfs:
+        activity_code = activity['activity'][0]
+        activity_dict[activity_code] += calculate_sequence_length(activity)
+    # return the dataframe containing the duration of each activity
+    report_df = pd.DataFrame(columns = ['Activity', "Duration (in secs)"])
+    for i in range(1, 8):
+        report_df.loc[i] = [activity_lookup[i], activity_dict[i]]
+    return report_df
 
 def generate_sequence_length_report(file_name: str = "sequence_length_report.txt"):
     '''
@@ -101,7 +121,10 @@ def get_activity_stats(activity_df: pd.DataFrame):
     #drop the count row
     reports.drop(index = "count", inplace=True)
     #drop the timestamp and activity columns
-    reports.drop(columns=['timestamp', 'activity'], inplace=True)
+    if "timestamp" in reports.index:
+        reports.drop(index = "timestamp", inplace=True)
+    if "activity" in reports.index:
+        reports.drop(index = "activity", inplace=True)
     return reports.T
 
 def generate_basic_stats_reports():
@@ -125,7 +148,36 @@ def generate_basic_stats_reports():
                 report_file.write(tabulate(activity_stats, headers='keys', tablefmt='psql'))
                 report_file.write("\n")
 
-def generate_violin_basic_stats(file_name: str = "violin_basic_stats"):
+def generate_violin_plot(activity_dfs: pd.DataFrame, subject: int = 1):
+    '''
+    Generates a violin plot of the given subject.
+    activity_dfs: pd.DataFrame: activity dataframe
+    '''
+    activity_dfs = merge_activity_sequence(activity_dfs)
+    # generate the violin plot
+    directions = ["x", "y", "z"]
+    activity_lst = ["workingPC", "stand", "stand+\nwalk+\nstairs",
+                    "walk", "stairs", "walk+\ntalk", "talk"]
+    pos = [1,2,3,4,5,6,7] # position of the activities on the y-axis
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(10, 7))
+    for direction in directions:
+        data = []
+        for activity in activity_dfs:
+            data.append(np.array(activity[direction].tolist(), dtype= np.float64))
+        axs[directions.index(direction)].violinplot(data, pos,
+                points=20, widths=0.3, vert=False, showmeans=True, showextrema=True,
+                showmedians=True)
+        axs[directions.index(direction)].set_title(f"Axis {direction}")
+        # set the y-axis to reflect corresponding activity
+        if direction == "x":
+            axs[directions.index(direction)].set_yticks(pos)
+            axs[directions.index(direction)].set_yticklabels(activity_lst)
+    # set title and save the plot
+    fig.suptitle(f"Violin plot of basic statistics, Subject {subject}")
+    return plt
+    
+
+def generate_violin_basic_stats_report(file_name: str = "violin_basic_stats"):
     '''
     Generate the violin plot to compare different activities.
     '''
@@ -157,7 +209,34 @@ def generate_violin_basic_stats(file_name: str = "violin_basic_stats"):
         fig.suptitle(f"Violin plot of basic statistics, Subject {i}")
         plt.savefig(report_file)
 
-def generate_histogram(file_name:str = "histogram"):
+def generate_histogram(activity_dfs: pd.DataFrame, subject: int = 1):
+    '''
+    Generates a histogram of the given activity.
+    activities_df: pd.DataFrame: activity dataframe
+    '''
+    # create a new dict to store the merged activity
+    activity_dfs = merge_activity_sequence(activity_dfs)
+    # initialize the histogram
+    fig, axs = plt.subplots(nrows=7, ncols=1, figsize=(10, 15))
+    fig.suptitle(f"Histogram of basic statistics, Subject {subject}")
+    for activity in activity_dfs:
+        activity_code = int(activity['activity'].tolist()[0])
+        # need to create a new dataframe to store the data according
+        # to the required format of a stacked histogram
+        # read: https://seaborn.pydata.org/generated/seaborn.histplot.html
+        hist_df = pd.DataFrame(columns=['data', 'axis'])
+        data_lst = activity['x'].tolist() + activity['y'].tolist() + activity['z'].tolist()
+        axis_lst = ['x' for i in range(len(activity))] + ['y' for i in range(len(activity))] + ['z' for i in range(len(activity))]
+        hist_df['data'] = data_lst
+        hist_df['axis'] = axis_lst
+        # generate the histogram using seaborn
+        sns.histplot(ax = axs[activity_code - 1],data=hist_df, x="data", hue="axis", bins=100)
+        axs[activity_code - 1].set_title(f"Histogram of Activity {activity_lookup[activity_code]}")
+    # increase the spaces between the plots
+    fig.tight_layout(pad = 1.0)
+    return plt
+
+def generate_histogram_report(file_name:str = "histogram"):
     '''
     Generate the histogram of the data.
     '''
