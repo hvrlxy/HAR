@@ -8,7 +8,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from datetime import datetime
 from tabulate import tabulate
-from fbprophet import Prophet
+# from fbprophet import Prophet
 from sklearn.ensemble import IsolationForest
 import pandas as pd
 import numpy as np
